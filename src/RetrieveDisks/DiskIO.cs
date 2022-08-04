@@ -73,7 +73,7 @@ public static class DiskIO
                 }
             }
 
-            var devicePath = System.Text.Encoding.Unicode.GetString(buffer[DevicePathOffset..]);
+            var devicePath = System.Text.Encoding.Unicode.GetString(buffer[DevicePathOffset..]).TrimEnd((char)0);
 
             using var disk = CreateFile(
                 devicePath,
@@ -102,6 +102,23 @@ public static class DiskIO
                 null);
 
             var diskname = "\\\\?\\PhysicalDrive" + diskNumber.DeviceNumber;
+
+            // Get size https://stackoverflow.com/a/38855953/6461844
+            var storage_read_capacity = new STORAGE_READ_CAPACITY();
+
+            if (!DeviceIoControl(
+                disk,
+                IOCTL_STORAGE_READ_CAPACITY,
+                null,
+                0,
+                &storage_read_capacity,
+                4096,
+                null,
+                null))
+            {
+                // Error
+                return;
+            }
         }
     }
 }
