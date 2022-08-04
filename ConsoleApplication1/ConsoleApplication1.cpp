@@ -31,6 +31,69 @@ using namespace std;
         cout << failedApi << " failed at " << failedLine << " : Error Code - " << error << endl;    \
     }
 
+// https://stackoverflow.com/a/48250301/6461844
+ULONG GetSerial(HANDLE hFile)
+{
+    static STORAGE_PROPERTY_QUERY spq = { StorageDeviceProperty, PropertyStandardQuery };
+
+    union {
+        PVOID buf;
+        PSTR psz;
+        PSTORAGE_DEVICE_DESCRIPTOR psdd;
+    };
+
+    ULONG size = sizeof(STORAGE_DEVICE_DESCRIPTOR) + 0x100;
+
+    ULONG dwError;
+
+    do
+    {
+        dwError = ERROR_NO_SYSTEM_RESOURCES;
+
+        if (buf = LocalAlloc(0, size))
+        {
+            ULONG BytesReturned;
+
+            if (DeviceIoControl(hFile, IOCTL_STORAGE_QUERY_PROPERTY, &spq, sizeof(spq), buf, size, &BytesReturned, 0))
+            {
+                if (psdd->Version >= sizeof(STORAGE_DEVICE_DESCRIPTOR))
+                {
+                    if (psdd->Size > size)
+                    {
+                        size = psdd->Size;
+                        dwError = ERROR_MORE_DATA;
+                    }
+                    else
+                    {
+                        if (psdd->SerialNumberOffset)
+                        {
+                            //DbgPrint("SerialNumber = %s\n", psz + psdd->SerialNumberOffset);
+                            cout << "SerialNumber = " << psz + psdd->SerialNumberOffset << endl;
+                            dwError = NOERROR;
+                        }
+                        else
+                        {
+                            dwError = ERROR_NO_DATA;
+                        }
+                    }
+                }
+                else
+                {
+                    dwError = ERROR_GEN_FAILURE;
+                }
+            }
+            else
+            {
+                dwError = GetLastError();
+            }
+
+            LocalFree(buf);
+        }
+    } while (dwError == ERROR_MORE_DATA);
+
+    return dwError;
+}
+
 int main()
 {
     HDEVINFO diskClassDevices;
@@ -123,6 +186,8 @@ int main()
             &bytesReturned,
             NULL),
             "IOCTL_STORAGE_GET_DEVICE_NUMBER");
+
+        GetSerial(disk);
 
         CloseHandle(disk);
         disk = INVALID_HANDLE_VALUE;

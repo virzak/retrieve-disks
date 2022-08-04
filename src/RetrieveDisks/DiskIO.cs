@@ -13,6 +13,25 @@ public static class DiskIO
 {
     static readonly int DevicePathOffset = (int)(nint)Marshal.OffsetOf<SP_DEVICE_INTERFACE_DETAIL_DATA_W>(nameof(SP_DEVICE_INTERFACE_DETAIL_DATA_W.DevicePath));
 
+
+    // https://stackoverflow.com/questions/144176/fastest-way-to-convert-a-possibly-null-terminated-ascii-byte-to-a-string
+    public static string UnsafeAsciiBytesToString(byte[] buffer, int offset)
+    {
+        int end = offset;
+        while (end < buffer.Length && buffer[end] != 0)
+        {
+            end++;
+        }
+        unsafe
+        {
+            fixed (byte* pAscii = buffer)
+            {
+                return new string((sbyte*)pAscii, offset, end - offset);
+            }
+        }
+    }
+
+
     public unsafe static void OpenDisks()
     {
         var diskClassDeviceInterfaceGuid = GUID_DEVINTERFACE_DISK;
@@ -119,6 +138,55 @@ public static class DiskIO
                 // Error
                 return;
             }
+
+            // https://stackoverflow.com/a/48250301/6461844
+            var spq = new STORAGE_PROPERTY_QUERY
+            {
+                PropertyId = STORAGE_PROPERTY_ID.StorageDeviceProperty,
+                QueryType = STORAGE_QUERY_TYPE.PropertyStandardQuery
+            };
+
+
+            WIN32_ERROR dwError = WIN32_ERROR.NO_ERROR;
+            var size = (uint)sizeof(STORAGE_DEVICE_DESCRIPTOR) + 0x100;
+            do
+            {
+                buffer = new byte[size];
+                uint bytesReturned;
+
+                fixed (void* pBuffer = buffer)
+                {
+                    if (!DeviceIoControl(
+                        disk,
+                        IOCTL_STORAGE_QUERY_PROPERTY,
+                        &spq,
+                        (uint)sizeof(STORAGE_PROPERTY_QUERY),
+                        pBuffer,
+                        size,
+                        &bytesReturned,
+                        null))
+                    {
+                        // Error
+                        return;
+                    }
+                    var psdd = (STORAGE_DEVICE_DESCRIPTOR*)pBuffer;
+
+                    if (psdd->Size > size)
+                    {
+                        size = psdd->Size;
+                        dwError = WIN32_ERROR.ERROR_MORE_DATA;
+                    }
+                    else
+                    {
+                        var debug = System.Text.Encoding.ASCII.GetString(buffer);
+                        var serial = UnsafeAsciiBytesToString(buffer, (int)psdd->SerialNumberOffset).TrimEnd();
+                        var vendor = UnsafeAsciiBytesToString(buffer, (int)psdd->VendorIdOffset).TrimEnd();
+                        var productId = UnsafeAsciiBytesToString(buffer, (int)psdd->ProductIdOffset).TrimEnd();
+                        var productRevision = UnsafeAsciiBytesToString(buffer, (int)psdd->ProductRevisionOffset).TrimEnd();
+                        dwError = WIN32_ERROR.NO_ERROR;
+                    }
+                }
+            } while (dwError == WIN32_ERROR.ERROR_MORE_DATA);
         }
     }
 }
