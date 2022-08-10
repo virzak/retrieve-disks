@@ -1,10 +1,11 @@
 namespace RetrieveDisksTests;
 
-public class UnitTest1
+public class DeviceInfoTests
 {
     [Fact]
-    public void Test1()
+    public void GetDeviceInfos()
     {
-        DiskIO.OpenDisks();
+        var list = DeviceInfo.GetDeviceInfos();
+        Assert.True(list.Count > 0);
     }
 }
