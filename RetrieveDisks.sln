@@ -11,12 +11,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ADAFEEF1
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RetrieveDisksTests", "tests\RetrieveDisksTests\RetrieveDisksTests.csproj", "{1D8B2975-B110-4902-88CD-BC0385BD020B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.vcxproj", "{969E8045-5D7E-43E9-8ED1-2C47E9FADAD9}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4343657C-8493-43B1-945D-1EADBB291F0E}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleApplication1", "src\ConsoleApplication1\ConsoleApplication1.vcxproj", "{969E8045-5D7E-43E9-8ED1-2C47E9FADAD9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
