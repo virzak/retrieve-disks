@@ -6,6 +6,7 @@ public class DeviceInfoTests
     public void GetDeviceInfos()
     {
         var list = DeviceInfo.GetDeviceInfos();
+        var res = System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions() { WriteIndented = true });
         Assert.True(list.Count > 0);
     }
 

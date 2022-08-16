@@ -9,7 +9,7 @@ using static Windows.Win32.PInvoke;
 
 namespace RetrieveDisks;
 
-public record DeviceInfo(string DevicePath, uint DeviceNumber, long DiskLength, string? Vendor, string? ProductId, string? ProductRevision, string? SerialNumber)
+public record DeviceInfo(string DevicePath, uint DeviceNumber, long DiskLength, uint SectorSize, string? Vendor, string? ProductId, string? ProductRevision, string? SerialNumber)
 {
     /// <summary>
     /// Gets the description.
@@ -117,14 +117,20 @@ public record DeviceInfo(string DevicePath, uint DeviceNumber, long DiskLength, 
                     throw new Win32Exception();
                 }
 
-                var lol = (byte*)&deviceInterfaceDetailData->DevicePath - pBuffer;
-                list.Add(UnicodeBytesToString(buffer, (int)lol));
+                var offset = (byte*)&deviceInterfaceDetailData->DevicePath - pBuffer;
+                list.Add(UnicodeBytesToString(buffer, (int)offset));
             }
         }
 
         return list;
     }
 
+    /// <summary>
+    /// Gets all relevant device information.
+    /// </summary>
+    /// <param name="devicePath">Device path (\\?\PhysicalDrive0).</param>
+    /// <returns>DeviceInfo structure containing all relevant information.</returns>
+    /// <exception cref="Win32Exception">When API call fails.</exception>
     public static unsafe DeviceInfo GetDeviceInfo(string devicePath)
     {
         using var disk = CreateFile(
@@ -153,15 +159,15 @@ public record DeviceInfo(string DevicePath, uint DeviceNumber, long DiskLength, 
             null);
 
         // Get size https://stackoverflow.com/a/38855953/6461844
-        var storage_read_capacity = default(STORAGE_READ_CAPACITY);
+        var diskGeometeryEx = default(DISK_GEOMETRY_EX);
 
         if (!DeviceIoControl(
             disk,
-            IOCTL_STORAGE_READ_CAPACITY,
+            IOCTL_DISK_GET_DRIVE_GEOMETRY_EX,
             null,
             0,
-            &storage_read_capacity,
-            4096,
+            &diskGeometeryEx,
+            (uint)sizeof(DISK_GEOMETRY_EX),
             null,
             null))
         {
@@ -225,7 +231,8 @@ public record DeviceInfo(string DevicePath, uint DeviceNumber, long DiskLength, 
         return new(
             devicePath,
             diskNumber.DeviceNumber,
-            storage_read_capacity.DiskLength,
+            diskGeometeryEx.DiskSize,
+            diskGeometeryEx.Geometry.BytesPerSector,
             vendor,
             productId,
             productRevision,
